@@ -21,12 +21,18 @@ def play_one_player_on_empty_graph():
 
 
 def play_one_player_on_ring():
-    graph = nx.empty_graph(20);
+    graph = nx.empty_graph(20)
     for i in xrange(19):
         graph.add_edge(i, i+1)
     graph.add_edge(19, 0)
     play_one_player_on_graph(graph, 0)
 
+def play_one_player_on_matchsticks():
+    graph = nx.empty_graph()
+    for i in xrange(10):
+        graph.add_edge(2*i, 2*i+1)
+    play_one_player_on_graph(graph, 0)
 
 
-play_one_player_on_ring()
+
+play_one_player_on_matchsticks()
