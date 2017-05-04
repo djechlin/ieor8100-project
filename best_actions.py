@@ -19,6 +19,27 @@ def best_addition(graph, player):
             best = {"improvement": player_improvement, "edge": (i, j)}
     return best
 
+def best_addition_2p_zero_sum(graph, player, opponent):
+    '''Determines the edge that produces the greatest additive improvement.'''
+    original_centralities = nx.betweenness_centrality(graph)
+    player_original = original_centralities[player]
+    opponent_original = original_centralities[opponent]
+    best = {}
+    for i, j in itertools.product(range(0, len(graph)), repeat=2):
+        if i == j:
+            continue
+        if graph.has_edge(i, j):
+            continue
+        [player_improvement, opponent_improvement] = compute_improvements(
+            graph, (i, j), (player, opponent), (player_original, opponent_original))
+        zero_sum_improvement = player_improvement - opponent_improvement
+        if not best or zero_sum_improvement > best['zero_sum_improvement']:
+            best = {"zero_sum_improvement": zero_sum_improvement,
+                    "edge": (i, j),
+                    "player_improvement": player_improvement,
+                    "opponent_improvement": opponent_improvement}
+    return best
+
 
 def compute_improvements(graph, edge, agents, original_centralities=None):
     '''Computes the change (improvement) in betweenness centrality for player if the given edge is
@@ -79,7 +100,29 @@ def test_best_addition_two_stars_will_kiss():
     assert best['edge'] == (0,1)
 
 
+def test_best_addition_2p_zero_sum_little_kisses_big():
+    star = nx.star_graph(10) # 0; 1,2,...,10
+    # Free up the last three nodes and make a path
+    star.remove_edge(0, 8)
+    star.remove_edge(0, 9)
+    star.remove_edge(0, 10)
+    star.add_edge(8, 9)
+    star.add_edge(9, 10)
+
+    # make a singleton
+    star.remove_edge(0, 7)
+
+    # without zero sum, the star node prefers the matchstick (all matchstick nodes are equivalent)
+    best = best_addition(graph=star, player=0)
+    assert best['edge'] == (0, 8)
+
+    # if node 8 is an opponent, the star node must connect away from it
+    best = best_addition_2p_zero_sum(graph=star, player=0, opponent=8)
+    assert best['edge'] == (0, 9)
+
+
 test_compute_improvement_nilpotent_throws_error()
 test_compute_improvement_graph_left_alone()
 test_best_addition_connect_three_nodes()
 test_best_addition_two_stars_will_kiss()
+test_best_addition_2p_zero_sum_little_kisses_big()
