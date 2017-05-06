@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 
 from best_actions import *
+from betweenness_centrality_cache import betweenness_centrality
 
 def play_one_player_on_graph(graph, player):
     for i in xrange(20):
@@ -36,8 +37,6 @@ def play_one_player_on_matchsticks():
 
 def parallel_graph_play_is_plus_or_minus_better():
 
-    results = []
-
     for turn in range(0,5):
         print('N   p      add    remove')
         for N in [20]:
@@ -61,7 +60,10 @@ def parallel_graph_play_is_plus_or_minus_better():
                         else:
                             remove_done = True
                 print('%d  %.2f | %.3f  %.3f' %
-                      (N, p, nx.betweenness_centrality(graph_add)[0], nx.betweenness_centrality(graph_remove)[0]))
+                      (N, p,
+                       betweenness_centrality(graph_add, 0),
+                       betweenness_centrality(graph_remove, 0)))
 
 
 parallel_graph_play_is_plus_or_minus_better()
+

@@ -4,6 +4,9 @@ import itertools
 import networkx as nx
 from collections import namedtuple
 
+from betweenness_centrality_cache import betweenness_centrality
+
+
 def addEdge(i, j):
         return {'i': i,
                 'j': j,
@@ -18,7 +21,6 @@ def removeEdge(i, j):
             'test': lambda graph : graph.remove_edge(i, j),
             'reset': lambda graph : graph.add_edge(i, j)
             }
-
 
 
 def best_addition(graph, player):
@@ -57,26 +59,23 @@ def best_removal(graph, player):
 def best_strategy(graph, agent, actions):
     if len(actions) == 0:
         return None
-    original_centrality = nx.betweenness_centrality(graph)[agent]
     return max(((
         {'action': action,
-         'improvement': compute_improvement(graph, action, agent, original_centrality)
+         'improvement': compute_improvement(graph, action, agent)
         }
     ) for action in actions), key=(lambda pair : pair['improvement']))
 
 
-def compute_improvement(graph, action, agent, original_centrality=None):
-    if original_centrality is None:
-        original_centrality = nx.betweenness_centrality(graph)[agent]
+def compute_improvement(graph, action, agent):
+    original_centrality = betweenness_centrality(graph, agent)
 
     action['test'](graph)
-    new_centrality = nx.betweenness_centrality(graph)[agent]
+    new_centrality = betweenness_centrality(graph, agent)
     improvement = new_centrality - original_centrality
 
     action['reset'](graph)
 
     return improvement
-
 
 
 # Tests
@@ -104,6 +103,7 @@ def test_best_addition_two_stars_will_kiss():
 def test_best_addition_adds_to_empty():
     graph = nx.empty_graph(2)
     best = best_addition(graph=graph, player=0)
+    assert best['edge'] == (0,1)
 
 
 
