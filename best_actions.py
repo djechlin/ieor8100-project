@@ -52,6 +52,14 @@ def best_removal(graph, player, score, opponent=None):
                          actions=[removeEdge(*edge) for edge in all_present_edges(graph)],
                          score=score)
 
+def best_addition_or_removal(graph, player, score, opponent=None):
+    return best_strategy(graph=graph,
+                         player=player,
+                         opponent=opponent,
+                         actions=([removeEdge(*edge) for edge in all_present_edges(graph)] +
+                                  [addEdge(*edge) for edge in all_absent_edges(graph)]),
+                        score=score)
+
 
 def best_strategy(graph, player, actions, score, opponent):
     if len(actions) == 0:

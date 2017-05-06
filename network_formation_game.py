@@ -3,6 +3,7 @@
 import itertools
 import networkx as nx
 import numpy as np
+import random
 
 from best_actions import *
 from betweenness_centrality_cache import betweenness_centrality
@@ -80,14 +81,30 @@ def same_graph_degree_competition():
     graph = nx.erdos_renyi_graph(N, p)
     p1 = 0
     p2 = 1
+    p1_bonus = 0.2
+
+    print("N: %d, p: %d, p1 bonus: %f" %
+          (N, p, p1_bonus))
 
     for rounds in xrange(200):
-        # player 1
-        best_a = best_addition(graph=graph_add,
-                               player=p1,
-                               score=score_degree,
-                               opponent=p2)
+        for player in (p1, p2):
+            opponent = 1 - player
+            # player 1
+            if player == p1 and random.random() <= p1_bonus:
+                turns = 2
+            else:
+                turns = 1
+            for i in range(0, turns):
+                best = best_addition_or_removal(graph=graph,
+                                                player=player,
+                                                opponent=opponent,
+                                                score=score_degree)
+                if best is not None:
+                    best['action']['test'](graph)
+                print('%d %d | %.3f %.3f' %
+                      (rounds, player, score_degree(graph, p1), score_degree(graph, p2)))
 
 
-parallel_graph_play_is_plus_or_minus_better()
+
+same_graph_degree_competition()
 
