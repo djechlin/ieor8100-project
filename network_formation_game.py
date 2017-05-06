@@ -36,28 +36,32 @@ def play_one_player_on_matchsticks():
 
 def parallel_graph_play_is_plus_or_minus_better():
 
-    print('N,p,add,remove')
-    for N in xrange(20,100,10):
-        for p in np.arange(0,0.5,0.01):
-            graph_add = nx.erdos_renyi_graph(N, p)
-            graph_remove = graph_add.copy()
-            add_done = False
-            remove_done = False
-            for rounds in xrange(2000):
-                if not add_done:
-                    best_a = best_addition(graph_add, 0)
-                    if best_a['improvement'] >= 0:
-                        graph_add.add_edge(*best_a['edge'])
-                    else:
-                        add_done = True
+    results = []
 
-                if not remove_done:
-                    best_r = best_removal(graph_remove, 0)
-                    if best_r['improvement'] >= 0:
-                        graph_removal.remove_edge(*best_r['edge'])
-                    else:
-                        remove_done = True
-            print('%r,%r,%r,%r' % (N, p, nx.betweenness_centrality(graph_add, 0), nx.betweenness_centrality(graph_remove, 0)))
+    for turn in range(0,5):
+        print('N   p      add    remove')
+        for N in [20]:
+            for p in np.arange(0,1.0,0.02):
+                graph_add = nx.erdos_renyi_graph(N, p)
+                graph_remove = graph_add.copy()
+                add_done = False
+                remove_done = False
+                for rounds in xrange(2000):
+                    if not add_done:
+                        best_a = best_addition(graph_add, 0)
+                        if best_a is not None and best_a['improvement'] >= 0:
+                            graph_add.add_edge(*best_a['edge'])
+                        else:
+                            add_done = True
+
+                    if not remove_done:
+                        best_r = best_removal(graph_remove, 0)
+                        if best_r is not None and best_r['improvement'] >= 0:
+                            graph_remove.remove_edge(*best_r['edge'])
+                        else:
+                            remove_done = True
+                print('%d  %.2f | %.3f  %.3f' %
+                      (N, p, nx.betweenness_centrality(graph_add)[0], nx.betweenness_centrality(graph_remove)[0]))
 
 
 parallel_graph_play_is_plus_or_minus_better()

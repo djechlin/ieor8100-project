@@ -8,7 +8,6 @@ def addEdge(i, j):
         return {'i': i,
                 'j': j,
                 'test': (lambda graph : graph.add_edge(i, j)),
-                'ignore': (lambda graph : graph.has_edge(i, j) or i == j),
                 'reset':  (lambda graph : graph.remove_edge(i, j))
                 }
 
@@ -16,26 +15,48 @@ def addEdge(i, j):
 def removeEdge(i, j):
     return {'i': i,
             'j': j,
-            'test': lambda graph : graph.add_edge(i, j),
-            'ignore': (lambda graph : not graph.has_edge(i, j) or i == j),
-            'reset': lambda graph : graph.remove_edge(i, j)
+            'test': lambda graph : graph.remove_edge(i, j),
+            'reset': lambda graph : graph.add_edge(i, j)
             }
 
 
-def best_addition(graph, player):
-    '''Determines the edge that when added to graph produces greatest improvement in betweenness
-    centrality. If opponent is present, computes best improvement minus opponent's change.
-    '''
 
+def best_addition(graph, player):
+    if graph.degree(player) == 0:
+        other = 1 if player == 0 else 0
+        return {'improvement': 0.001, 'action': addEdge(player, other),
+                'edge': (player, other) }
     best = best_strategy(graph, player,
                          [addEdge(i, j) for i, j in
-                          itertools.product(range(0, len(graph)), repeat=2)])
-                         
-    return { 'improvement': best['improvement'],
+                          itertools.product(range(0, len(graph)), repeat=2)
+                          if i != j
+                          and not graph.has_edge(i, j)
+                         ])
+    if best == None:
+        return None
+
+    return { 'improvement': best['improvement'], 'action': best['action'],
+             'edge': (best['action']['i'], best['action']['j']) }
+
+
+def best_removal(graph, player):
+    best = best_strategy(graph, player,
+                         [removeEdge(i, j) for i, j in
+                          itertools.product(range(0, len(graph)), repeat=2)
+                          if i != j
+                          and graph.has_edge(i, j)
+                         ])
+
+    if best == None:
+        return None
+
+    return { 'improvement': best['improvement'], 'action': best['action'],
              'edge': (best['action']['i'], best['action']['j']) }
 
 
 def best_strategy(graph, agent, actions):
+    if len(actions) == 0:
+        return None
     original_centrality = nx.betweenness_centrality(graph)[agent]
     return max(((
         {'action': action,
@@ -44,15 +65,9 @@ def best_strategy(graph, agent, actions):
     ) for action in actions), key=(lambda pair : pair['improvement']))
 
 
-def compute_improvement(graph, action, agent, original_centrality=-1):
-    '''Computes the change (improvement) in betweenness centrality for player if the given edge is
-    added to the graph. If opponent is present, computes best improvement minus opponent's change.
-    '''
-    if original_centrality == -1:
+def compute_improvement(graph, action, agent, original_centrality=None):
+    if original_centrality is None:
         original_centrality = nx.betweenness_centrality(graph)[agent]
-
-    if 'ignore' in action and action['ignore'](graph):
-        return 0
 
     action['test'](graph)
     new_centrality = nx.betweenness_centrality(graph)[agent]
@@ -63,18 +78,17 @@ def compute_improvement(graph, action, agent, original_centrality=-1):
     return improvement
 
 
+
 # Tests
 
 
 def test_compute_improvement_graph_left_alone():
-    '''Tests that compute_improvement does not modify graph when finished.'''
     graph = nx.empty_graph(4)
     compute_improvement(graph, action=addEdge(0, 1), agent=0)
     assert graph.adj == nx.empty_graph(4).adj
 
 
 def test_best_addition_connect_three_nodes():
-    '''Tests that if player and 1 are connected, player will connect to 2.'''
     graph = nx.empty_graph(3)
     graph.add_edge(0, 1)
     best = best_addition(graph=graph, player=0)
@@ -87,8 +101,13 @@ def test_best_addition_two_stars_will_kiss():
     assert best['edge'] == (0,1)
 
 
+def test_best_addition_adds_to_empty():
+    graph = nx.empty_graph(2)
+    best = best_addition(graph=graph, player=0)
 
 
-#test_compute_improvement_graph_left_alone()
-#test_best_addition_connect_three_nodes()
+
+test_compute_improvement_graph_left_alone()
+test_best_addition_connect_three_nodes()
 test_best_addition_two_stars_will_kiss()
+test_best_addition_adds_to_empty()
