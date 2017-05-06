@@ -12,7 +12,7 @@ def play_one_player_on_graph(graph, player):
         best = best_addition(graph, player)
         print(best)
         if best['improvement'] >= 0:
-            graph.add_edge(*best['edge'])
+            graph.add_edge(*best['action']['edge'])
         else:
             print('No more improvements')
             return
@@ -47,22 +47,46 @@ def parallel_graph_play_is_plus_or_minus_better():
                 remove_done = False
                 for rounds in xrange(2000):
                     if not add_done:
-                        best_a = best_addition(graph_add, 0)
+                        best_a = best_addition(graph=graph_add,
+                                               player=0,
+                                               score=betweenness_centrality)
                         if best_a is not None and best_a['improvement'] >= 0:
-                            graph_add.add_edge(*best_a['edge'])
+                            graph_add.add_edge(*best_a['action']['edge'])
                         else:
                             add_done = True
 
                     if not remove_done:
-                        best_r = best_removal(graph_remove, 0)
+                        best_r = best_removal(graph=graph_remove,
+                                              player=0,
+                                              score=betweenness_centrality)
                         if best_r is not None and best_r['improvement'] >= 0:
-                            graph_remove.remove_edge(*best_r['edge'])
+                            graph_remove.remove_edge(*best_r['action']['edge'])
                         else:
                             remove_done = True
                 print('%d  %.2f | %.3f  %.3f' %
                       (N, p,
                        betweenness_centrality(graph_add, 0),
                        betweenness_centrality(graph_remove, 0)))
+
+
+
+def score_degree(graph, node):
+    return graph.degree(node)
+
+
+def same_graph_degree_competition():
+    N = 20
+    p = 0.25
+    graph = nx.erdos_renyi_graph(N, p)
+    p1 = 0
+    p2 = 1
+
+    for rounds in xrange(200):
+        # player 1
+        best_a = best_addition(graph=graph_add,
+                               player=p1,
+                               score=score_degree,
+                               opponent=p2)
 
 
 parallel_graph_play_is_plus_or_minus_better()
