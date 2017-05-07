@@ -7,28 +7,57 @@ from collections import namedtuple
 from betweenness_centrality_cache import betweenness_centrality
 
 
-def addEdge(i, j):
-        return {'i': i,
-                'j': j,
-                'edge': (i, j),
-                'test': (lambda graph : graph.add_edge(i, j)),
-                'reset':  (lambda graph : graph.remove_edge(i, j))
+def toggle_edge(graph, i, j):
+    if graph.has_edge(i, j):
+        graph.remove_edge(i, j)
+    else:
+        graph.add_edge(i, j)
+
+neighbors = []
+
+def make_assassination(i):
+        neighbors = []
+        def test(graph):
+                for n in graph.neighbors(i):
+                    neighbors.append(n)
+                    graph.remove_edge(i, n)
+
+        def reset(graph):
+                for n in neighbors:
+                   graph.add_edge(n, i)
+
+
+        return {'test': test, 'reset': reset, 'strategy': lambda : 'assassinate(%d)' % len(neighbors)}
+
+
+def make_toggle(i, j):
+        return {'edge': (i, j),
+                'strategy': lambda : '',
+                'test': lambda graph : toggle_edge(graph, i, j),
+                'reset': lambda graph : toggle_edge(graph, i, j)
+                }
+def make_two_toggles(edge1, edge2):
+        toggle1 = make_toggle(*edge1)
+        toggle2 = make_toggle(*edge2)
+        def test(graph):
+            toggle1['test'](graph)
+            toggle2['test'](graph)
+        def reset(graph):
+            toggle2['reset'](graph)
+            toggle1['reset'](graph)
+        return {
+                'test': test,
+                'reset': reset,
+                'strategy': lambda :'double'
                 }
 
-
-def removeEdge(i, j):
-    return {'i': i,
-            'j': j,
-            'edge': (i, j),
-            'test': (lambda graph : graph.remove_edge(i, j)),
-            'reset': (lambda graph : graph.add_edge(i, j))
-            }
-
-def all_edges_such_that(graph, test):
+def all_edges_such_that(graph, test=None, node_list=None):
+        if node_list is None:
+            node_list = range(0, len(graph));
         return [(i, j) for i, j in
-                itertools.product(range(0, len(graph)), repeat=2)
+                itertools.product(node_list, repeat=2)
                 if i != j
-                and test(graph, i, j)];
+                and (test is None or test(graph, i, j))];
 
 def all_present_edges(graph):
         return all_edges_such_that(graph, (lambda g, i, j : g.has_edge(i, j)))
@@ -41,7 +70,7 @@ def best_addition(graph, score, player, opponent=None):
     return best_strategy(graph=graph,
                          player=player,
                          opponent=opponent,
-                         actions=[addEdge(*edge) for edge in all_absent_edges(graph)],
+                         actions=[make_toggle(*edge) for edge in all_absent_edges(graph)],
                          score=score)
 
 
@@ -49,16 +78,16 @@ def best_removal(graph, player, score, opponent=None):
     return best_strategy(graph=graph,
                          player=player,
                          opponent=opponent,
-                         actions=[removeEdge(*edge) for edge in all_present_edges(graph)],
+                         actions=[make_toggle(*edge) for edge in all_present_edges(graph)],
                          score=score)
 
-def best_addition_or_removal(graph, player, score, opponent=None):
+def best_addition_or_removal(graph, player, score, node_list=None, opponent=None):
     return best_strategy(graph=graph,
                          player=player,
                          opponent=opponent,
-                         actions=([removeEdge(*edge) for edge in all_present_edges(graph)] +
-                                  [addEdge(*edge) for edge in all_absent_edges(graph)]),
-                        score=score)
+                         actions=[make_toggle(*edge)
+                                  for edge in all_edges_such_that(graph, node_list=node_list)],
+                         score=score)
 
 
 def best_strategy(graph, player, actions, score, opponent):
@@ -106,7 +135,7 @@ def compute_improvement(graph, action, player, opponent, score, diff=(lambda a, 
 def test_compute_improvement_graph_left_alone():
     graph = nx.empty_graph(4)
     compute_improvement(graph=graph,
-                        action=addEdge(0, 1),
+                        action=make_toggle(0, 1),
                         player=0,
                         opponent=None,
                         score=betweenness_centrality)

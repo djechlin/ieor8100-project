@@ -70,39 +70,72 @@ def parallel_graph_play_is_plus_or_minus_better():
                        betweenness_centrality(graph_remove, 0)))
 
 
-
 def score_degree(graph, node):
     return graph.degree(node)
 
 
 def same_graph_degree_competition():
     N = 20
-    p = 0.25
+    available_nodes = 5
+    full_node_list = [i for i in xrange(0, N)]
+    p = 0
     graph = nx.erdos_renyi_graph(N, p)
     p1 = 0
     p2 = 1
-    p1_bonus = 0.2
+    p1_bonus_rate = 0.05
+    p2_bonus_rate = 0.0
 
-    print("N: %d, p: %d, p1 bonus: %f" %
-          (N, p, p1_bonus))
+    print("N: %d, p: %d, p1 bonus: %f, p2 bonus: %f" %
+          (N, p, p1_bonus_rate, p2_bonus_rate))
 
-    for rounds in xrange(200):
+    p1_wins = 0
+    
+    for rounds in xrange(2000):
+
+        p1_bonus_activated = random.random() <= p1_bonus_rate
+        p2_bonus_activated = random.random() <= p2_bonus_rate
+
         for player in (p1, p2):
+            random.shuffle(full_node_list)
             opponent = 1 - player
-            # player 1
-            if player == p1 and random.random() <= p1_bonus:
-                turns = 2
-            else:
-                turns = 1
-            for i in range(0, turns):
-                best = best_addition_or_removal(graph=graph,
-                                                player=player,
-                                                opponent=opponent,
-                                                score=score_degree)
-                if best is not None:
-                    best['action']['test'](graph)
-                print('%d %d | %.3f %.3f' %
-                      (rounds, player, score_degree(graph, p1), score_degree(graph, p2)))
+
+            node_list = full_node_list[:available_nodes]
+
+            actions = [make_toggle(*edge)
+                           for edge in all_edges_such_that(graph, node_list=node_list)]
+            extra_actions = []
+
+            if player == p1 and p1_bonus_activated:
+                extra_actions = [make_two_toggles(edge1, edge2)
+                                 for edge1, edge2
+                                 in itertools.product(all_edges_such_that(graph, node_list=node_list),
+                                                      repeat=2)];
+            if player == p2 and p2_bonus_activated:
+                extra_actions = [make_assassination(i) for i in node_list if i != p1]
+
+
+            best = best_strategy(graph=graph,
+                                 player=player,
+                                 opponent=opponent,
+                                 actions=actions+extra_actions,
+                                 score=betweenness_centrality)
+            if best is not None:
+                best['action']['test'](graph)
+            strategy = 'None'
+            if best is not None:
+                strategy = best['action']['strategy']()
+            p1_score = betweenness_centrality(graph, p1)
+            p2_score = betweenness_centrality(graph, p2)
+            if p1_score > p2_score:
+                p1_wins += 1
+
+            print('%d  %3d:%d %17s | %.3f %.3f' %
+                  (p1_wins,
+                   rounds,
+                   player,
+                   strategy,
+                   betweenness_centrality(graph, p1),
+                   betweenness_centrality(graph, p2)))
 
 
 
